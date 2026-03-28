@@ -1,51 +1,50 @@
-import readline from "node:readline";
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { stdin, stdout } from "node:process";
+import { createInterface } from "node:readline/promises";
+import { runKilo } from "./utils/kilo.js";
+import { logger } from "./utils/logger.js";
 
-const apiKey = process.env.KILO_API_KEY;
-if (!apiKey) {
-	console.error("Error: KILO_API_KEY environment variable is required");
-	process.exit(1);
+const rl = createInterface({ input: stdin, output: stdout });
+
+function cleanup() {
+	rl.close();
+	logger.info("Goodbye!");
+	process.exit(0);
 }
 
-const kilo = createOpenAI({
-	baseURL: "https://api.kilo.ai/api/gateway",
-	apiKey,
-});
-
-const rl = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout,
-});
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
 
 async function chat() {
-	console.log("SimpleClaw Chatbot (type 'exit' to quit)\n");
+	logger.info("SimpleClaw Agent (type 'exit' to quit)\n");
 
 	while (true) {
-		const input = await new Promise<string>((resolve) => {
-			rl.question("> ", resolve);
-		});
+		const input = await rl.question("> ");
 
 		if (input.trim().toLowerCase() === "exit") {
-			console.log("Goodbye!");
-			rl.close();
-			break;
+			cleanup();
 		}
+
+		if (!input.trim()) continue;
 
 		try {
-			const result = streamText({
-				model: kilo.chat("kilo-auto/balanced"),
-				messages: [{ role: "user", content: input }],
+			logger.info("Running kilo...");
+			const result = await runKilo({
+				message: input,
+				onStdout: (data) => stdout.write(data),
+				onStderr: (data) => stdout.write(data),
 			});
 
-			process.stdout.write("\n");
-			for await (const textPart of result.textStream) {
-				process.stdout.write(textPart);
+			if (result.exitCode !== 0) {
+				logger.error(`kilo exited with code ${result.exitCode}`);
+			} else {
+				logger.info("kilo completed successfully");
 			}
-			process.stdout.write("\n\n");
-		} catch (error) {
-			console.error("Error:", error instanceof Error ? error.message : error);
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error(`error: ${msg}`);
 		}
+
+		stdout.write("\n");
 	}
 }
 

@@ -38,9 +38,6 @@ git clone https://github.com/yourusername/simpleclaw.git
 cd simpleclaw
 npm install
 
-# Setup via Kilo CLI (configure model, agents, etc.)
-npx kilo
-
 # Run
 npm run dev
 ```
@@ -49,9 +46,9 @@ Then type your message and press Enter. Type `exit` to quit.
 
 ## Setup & Configuration
 
-SimpleClaw is designed to be configured and edited through **Kilo CLI**. All settings live in `kilo.json` and can be managed with:
+SimpleClaw uses **Kilo CLI** for AI capabilities. All settings live in `kilo.json` and can be managed with:
 
-- `npx kilo` - Interactive setup
+- `npx kilo` - Interactive setup (before downloading binary)
 - Edit `kilo.json` directly for configuration
 
 ### Editable via Kilo CLI
@@ -63,25 +60,26 @@ Every aspect of SimpleClaw can be modified through Kilo CLI:
 - **Permissions**: Configure tool access and permissions
 - **Prompts**: Edit system prompts and conversation flow
 
-The code itself is ~100 lines of readable TypeScript in `src/`. Open the project with `npx kilo` and ask to modify any part—the entire codebase fits in context.
+The code itself is ~100 lines of readable TypeScript in `src/`. Open the project with Kilo and ask to modify any part—the entire codebase fits in context.
 
 ## Architecture
 
-SimpleClaw uses the Vercel AI Agents SDK with a simple, readable structure:
+SimpleClaw has a minimal, readable structure:
 
 ```
 ┌─────────────────────────────────────────┐
-│ ToolLoopAgent (AI Agents SDK)           │
+│ SimpleClaw CLI                          │
 │                                         │
-│  model: kilo-auto/free (via Kilo CLI)  │
-│  instructions: SimpleClaw system prompt │
+│  Spawns: kilo run <message>             │
 │                                         │
-│  Tools: run (execute shell commands)    │
-│  stopWhen: stepCountIs(10)              │
+│  Uses Kilo's built-in tools:            │
+│  - read, write, edit                    │
+│  - bash, glob, grep                     │
+│  - webfetch, task                       │
 └─────────────────────────────────────────┘
 ```
 
-Configured and edited through **Kilo CLI** (`npx kilo`). The entire codebase is ~100 lines. You can read it in 5 minutes.
+The entire codebase is ~100 lines. You can read it in 5 minutes.
 
 ## Design Principles
 
@@ -94,9 +92,9 @@ Configured and edited through **Kilo CLI** (`npx kilo`). The entire codebase is 
 
 ## Tech Stack
 
-- **AI Framework**: [Vercel AI Agents SDK](https://ai-sdk.dev) (`@ai-sdk/ai`)
-- **LLM Provider**: Kilo API (via OpenAI-compatible endpoint)
-- **CLI & Setup**: [Kilo CLI](https://kilo.ai/docs)
+- **AI Runtime**: [Kilo CLI](https://kilo.ai/docs) via npx
+- **LLM Provider**: Kilo API
+- **Language**: TypeScript
 - **Runtime**: Node.js
 
 ## Inspiration
