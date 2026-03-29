@@ -1,4 +1,5 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+
+# Environment
 .env
-*.tsbuildinfo

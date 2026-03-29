@@ -1,123 +1,106 @@
 # SimpleClaw
 
-> A minimal CLI chatbot. Small enough to understand. Editable enough to make your own.
+*A personal memory system and creative partner powered by Kilo AI.*
 
-## The Problem
+## What is SimpleClaw?
 
-Most AI agent frameworks are bloated. They ship plugin registries, chain abstractions, and retrieval pipelines you'll never use—while you pay the complexity tax in every line you read.
+SimpleClaw is a personal knowledge management system built on Kilo AI. It follows Zettelkasten principles to create an atomic note system that:
+- Remembers everything you share
+- Surfaces relevant context automatically
+- Creates blog posts while you sleep
+- Discovers connections across your notes
 
-Fred Brooks distinguished between **essential complexity** (inherent to the problem) and **accidental complexity** (introduced by our solutions). Agent frameworks are drowning in accidental complexity.
+## Core Philosophy
 
-## Essential vs Accidental Complexity
+SimpleClaw follows 32 principles from PKM, Second Brain, and AI Memory research:
+- **Conversation is the interface** - No commands, just talk
+- **Memory is contextual** - Surfaces what you need before you ask
+- **Atomicity** - One idea per note, linked to others
+- **Frictionless capture** - Propose, don't demand
+- **Human sovereignty** - You own your data
 
-What does a personal AI assistant _actually_ need?
-
-```
-1. Receive a message
-2. Pass it to an LLM
-3. Return the response
-```
-
-That's the essential complexity. Three operations. ~100 lines of tight code.
-
-So where do the other 50,000 lines come from?
-
-- Plugin registries (for extensibility you might not need)
-- Chain abstractions (for composition patterns you might not use)
-- Memory backends (for scale you might not reach)
-- Retrieval pipelines (for documents you might not have)
-
-These features serve maybe 5% of users. The other 95% pay the complexity tax anyway.
-
-SimpleClaw takes a different approach: **small code is editable code**. When your entire chatbot fits in a context window, you can understand and modify it directly. No configuration files. No framework to learn. Just code.
-
-## Quick Start
-
-```bash
-git clone https://github.com/yourusername/simpleclaw.git
-cd simpleclaw
-npm install
-
-# Run
-npm run dev
-```
-
-Then type your message and press Enter. Type `exit` to quit.
-
-## Setup & Configuration
-
-SimpleClaw uses **Kilo CLI** for AI capabilities. All settings live in `kilo.json` and can be managed with:
-
-- `npx kilo` - Interactive setup (before downloading binary)
-- Edit `kilo.json` directly for configuration
-
-### Editable via Kilo CLI
-
-Every aspect of SimpleClaw can be modified through Kilo CLI:
-- **Model**: Switch between different AI models (`/models`)
-- **Agents**: Customize agent behavior and instructions
-- **Commands**: Add or modify slash commands
-- **Permissions**: Configure tool access and permissions
-- **Prompts**: Edit system prompts and conversation flow
-
-The code itself is ~100 lines of readable TypeScript in `src/`. Open the project with Kilo and ask to modify any part—the entire codebase fits in context.
+See [core/CLAW.md](core/CLAW.md) for full principles.
 
 ## Architecture
 
-SimpleClaw has a minimal, readable structure:
-
 ```
-┌─────────────────────────────────────────┐
-│ SimpleClaw CLI                          │
-│                                         │
-│  Spawns: kilo run <message>             │
-│                                         │
-│  Uses Kilo's built-in tools:            │
-│  - read, write, edit                    │
-│  - bash, glob, grep                     │
-│  - webfetch, task                       │
-└─────────────────────────────────────────┘
+simpleclaw/
+├── .kilo/                    # Kilo AI configuration
+│   └── agents/              # Agent definitions
+│       ├── simpleclaw.md     # Main interface
+│       ├── memory-keeper.md  # Organizes inbox
+│       ├── idea-generator.md # Discovers connections
+│       └── blog-writer.md    # Creates blog posts
+│
+├── core/                     # System files
+│   ├── CLAW.md              # Philosophy & constraints
+│   ├── USER.md              # Your profile
+│   └── NOW.md               # Session state
+│
+└── data/                    # Your content
+    ├── inbox/              # Raw captures
+    ├── zettels/            # Atomic notes
+    ├── diary/              # Daily reflections
+    └── synthesis/          # Generated content
 ```
 
-The entire codebase is ~100 lines. You can read it in 5 minutes.
+## Quick Start
 
-## Design Principles
+### 1. Install Kilo
 
-| Principle     | Why                                              |
-| ------------- | ------------------------------------------------ |
-| Minimal       | Three operations, not thirty                     |
-| Readable      | Fits in your head, not spread across fifty files |
-| Editable      | When you understand it, you can change it        |
-| Fast feedback | Tokens used + exit codes in every response       |
+```bash
+npm install -g @kilocode/cli
+```
 
-## Tech Stack
+### 2. Start SimpleClaw
 
-- **AI Runtime**: [Kilo CLI](https://kilo.ai/docs) via npx
-- **LLM Provider**: Kilo API
-- **Language**: TypeScript
-- **Runtime**: Node.js
+```bash
+cd /path/to/simpleclaw
+kilo --agent simpleclaw
+```
 
-## Inspiration
+## How It Works
 
-SimpleClaw is inspired by:
+### Zettelkasten System
 
-- **[NanoClaw](https://nanoclaw.dev/)** - The 15-file personal AI agent. "Small enough to understand. Secure by isolation. Yours to modify."
-- **[The 500-Line Agent](https://themiloway.github.io/milo-blog/agentic-coding/typescript/architecture/2026/02/03/the-500-line-agent.html)** - A case for radical minimalism in agent frameworks.
+Everything is a **zettel** (atomic note):
+- One idea per note
+- Linked with `[[wikilinks]]`
+- Tagged for organization
+- Tracked with timestamps
 
-> "Most agent framework code is accidental. It exists because someone anticipated a use case that, for the average user building a personal assistant, never shows up."
+### Workers
 
-> "NanoClaw bets you can just delete that code and nothing breaks. So far, the bet's paying off."
+Invoke workers for background tasks:
+- **Memory Keeper** - Organizes inbox into zettels
+- **Idea Generator** - Discovers connections across notes
+- **Blog Writer** - Creates blog posts from your ideas
 
-## The Real Lesson
+### Daily Usage
 
-> "Before adding complexity, ask what you're actually building. Start minimal. Add complexity only when you hit real limitations. You'll probably hit them later than you expect."
+Just speak naturally:
+```
+"Jane's birthday is August 15, she's a senior engineer on the platform team"
+```
 
-Sometimes the most sophisticated thing you can build is the simplest thing that works.
+SimpleClaw will:
+1. Create a zettel in `data/zettels/`
+2. Link to related notes
+3. Surface it when relevant
 
-## References
+## Configuration
 
-- [Why Your AI Agent Gets Lost in Monorepos](https://themiloway.github.io/milo-blog/agentic-coding/typescript/tooling/2026/02/02/why-your-ai-agent-gets-lost-in-monorepos.html) - Raw code access isn't enough; agents need semantic understanding and lean context
-- [AGENTS.md Router Pattern](https://themiloway.github.io/milo-blog/agentic-coding/typescript/tooling/2026/02/02/why-your-ai-agent-gets-lost-in-monorepos.html#the-router-pattern-for-agentsmd) - Progressive disclosure for agent context
+### Adding Workers
+
+Create `.kilo/agents/my-worker.md` following the existing patterns.
+
+### Customizing Personalities
+
+Edit agent files in `.kilo/agents/`. Each worker has a distinct voice while following CLAW principles.
+
+## Troubleshooting
+
+Ask Kilo Code to fix it.
 
 ## License
 

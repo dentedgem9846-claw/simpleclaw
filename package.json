@@ -1,23 +1,8 @@
 {
 	"name": "simpleclaw",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"type": "module",
 	"dependencies": {
 		"@kilocode/cli": "^7.1.9"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
-		"@types/node": "^22.13.14",
-		"tsx": "^4.21.0",
-		"typescript": "^5.8.2"
-	},
-	"scripts": {
-		"dev": "tsx src/index.ts",
-		"lint": "biome lint src",
-		"lint:fix": "biome lint src --write",
-		"format": "biome format src",
-		"check": "biome check src",
-		"typecheck": "tsc --noEmit",
-		"precommit": "npm run lint && npm run check && npm run typecheck"
 	}
 }

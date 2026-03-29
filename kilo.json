@@ -1,5 +1,11 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
-  "model": "kilo/kilo-auto/balanced",
-  "default_agent": "code"
+  "model": "kilo/minimax/minimax-m2.7",
+  "small_model": "kilo/kilo-auto/free",
+  "default_agent": "code",
+  "instructions": [
+    "core/CLAW.md",
+    "core/USER.md"
+  ],
+  "snapshot": true
 }
