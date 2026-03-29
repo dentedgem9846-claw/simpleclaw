@@ -49,57 +49,23 @@ simpleclaw/
 ### Prerequisites
 
 - Docker and Docker Compose
-- An AI API key (see [AI Providers](#ai-providers) below)
+- A Kilo API key from https://app.kilo.ai/
 
-### 1. Clone and Setup
+### Setup
 
+Follow the detailed [Setup Guide](docs/SETUP.md) for step-by-step instructions.
+
+**TL;DR:**
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/dentedgem9846-claw/simpleclaw.git
 cd simpleclaw
 cp .env.example .env
-```
-
-### 2. Configure Kilo Gateway
-
-1. Get your Kilo API key from https://app.kilo.ai/
-2. Edit `.env`:
-   ```
-   KILO_API_KEY=klo_...
-   # Optional - only if your Kilo server requires authentication
-   # KILO_PASSWORD=your-secure-password
-   ```
-
-### 3. Start the Bot
-
-```bash
-# Build and start all containers (uses .env file automatically)
+# Edit .env with your KILO_API_KEY
 docker-compose up -d --build
-
-# Watch logs
-docker-compose logs -f
+docker-compose logs simpleclaw-bot-1 | grep -i "address"
 ```
 
-**Note:** `docker-compose` automatically reads variables from `.env` in the same directory.
-
-### 4. Get the Bot Address
-
-```bash
-# Find the connection address in logs
-docker-compose logs simpleclaw-bot-1 | grep -i "connLink\|address"
-```
-
-Example output:
-```
-Bot address created {"link": "simplex:/alice123...xyz#false"}
-```
-
-### 5. Connect via SimpleX Chat
-
-1. Install [SimpleX Chat](https://simplex.chat/) on your phone or desktop
-2. Add contact → Enter connection address → Paste the `simplex:/...` address
-3. Send a message to the bot
-
-The bot will respond using Kilo AI with access to your memory system.
+Then connect via SimpleX Chat using the address from the logs.
 
 ## How It Works
 
@@ -132,43 +98,18 @@ SimpleClaw will:
 
 ## Troubleshooting
 
-### Container won't start
+**See [docs/SETUP.md](docs/SETUP.md#troubleshooting-workflow) for detailed troubleshooting.**
 
+Quick checks:
 ```bash
-# Check logs for errors
-docker-compose logs
+# Is bot running?
+docker-compose ps
 
-# Rebuild from scratch
-docker-compose down -v
-docker-compose up -d --build
-```
+# Is bot healthy?
+curl http://localhost:8080/health
 
-### Bot not responding
-
-1. Check health endpoint:
-   ```bash
-   curl http://localhost:8080/health
-   ```
-2. Verify Kilo is healthy:
-   ```bash
-   docker-compose logs kilo-1
-   ```
-3. Check SimpleX connection:
-   ```bash
-   docker-compose logs simplex-chat-1
-   ```
-
-### View/Edit Data
-
-```bash
-# Access bot database
-docker-compose exec simpleclaw-bot-1 sqlite3 /app/data/bot.db
-
-# List zettels
-ls -la data/zettels/
-
-# View inbox
-ls -la data/inbox/
+# Check logs
+docker-compose logs --tail=50
 ```
 
 ---
@@ -180,10 +121,6 @@ Create `.kilo/agents/my-worker.md` following the existing patterns.
 ### Customizing Personalities
 
 Edit agent files in `.kilo/agents/`. Each worker has a distinct voice while following CLAW principles.
-
-## Troubleshooting
-
-Ask Kilo Code to fix it.
 
 ## License
 
