@@ -10,8 +10,7 @@ import type { UserContactLinkCreatedResponse, UserContactLinkResponse } from './
 import { SimplexWsClient } from './simplex/websocket.js';
 
 const SIMPLEX_WS_URL = process.env.SIMPLEX_WS_URL ?? 'ws://localhost:5225';
-const KILO_API_URL = process.env.KILO_API_URL ?? 'http://localhost:4096';
-const KILO_PASSWORD = process.env.KILO_PASSWORD ?? '';
+const KILO_API_KEY = process.env.KILO_API_KEY ?? '';
 const BOT_DATA_DIR = process.env.BOT_DATA_DIR ?? '/app/data';
 const HEALTH_PORT = 8080;
 
@@ -84,16 +83,23 @@ async function main(): Promise<void> {
   startHealthServer();
 
   const memory = new MemoryStore(DB_PATH);
-  const kilo = new KiloClient(KILO_API_URL, KILO_PASSWORD || undefined);
+  const kilo = new KiloClient(KILO_API_KEY);
   const sessions = new SessionManager(kilo);
   const simplex = new SimplexWsClient(SIMPLEX_WS_URL);
 
   logger.info('main', 'Connecting to SimpleX', { url: SIMPLEX_WS_URL });
   await simplex.connect();
 
+  await simplex.sendCommand('/start').catch((err) => {
+    logger.warn('main', 'Chat start warning', { error: err.message });
+  });
+  logger.info('main', 'Chat controller started');
+
   await firstRunSetup(simplex);
 
-  logger.info('main', 'Checking Kilo health', { url: KILO_API_URL });
+  await firstRunSetup(simplex);
+
+  logger.info('main', 'Checking Kilo health');
   const health = await kilo.health();
   logger.info('main', 'Kilo healthy', { version: health.version });
 

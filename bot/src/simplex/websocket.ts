@@ -39,6 +39,7 @@ export class SimplexWsClient extends EventEmitter {
 
       this.ws.on('message', (data: WebSocket.RawData) => {
         const raw = data.toString();
+        logger.debug('simplex', 'Raw message received', { raw: raw.slice(0, 500) });
         const msg = decodeMessage(raw);
         if (!msg) {
           logger.warn('simplex', 'Failed to decode message', { raw: raw.slice(0, 200) });
@@ -136,6 +137,18 @@ export class SimplexWsClient extends EventEmitter {
 
   onEvent(handler: EventHandler): void {
     this.on('event', handler);
+  }
+
+  sendRaw(message: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      logger.error('simplex', 'Cannot send, WebSocket not connected');
+      return;
+    }
+    this.ws.send(message, (err) => {
+      if (err) {
+        logger.error('simplex', 'Send error', { error: err.message });
+      }
+    });
   }
 
   async close(): Promise<void> {

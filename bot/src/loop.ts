@@ -80,6 +80,7 @@ export class MessageLoop {
 
   start(): void {
     this.simplex.onEvent((event: SimplexEvent) => {
+      logger.debug('loop', 'Raw event received', { type: event.type, event });
       const { type } = event;
 
       if (type === 'newChatItems') {
@@ -140,10 +141,12 @@ export class MessageLoop {
 
   private async handleNewChatItems(event: NewChatItemsEvent): Promise<void> {
     for (const chatItem of event.chatItems) {
-      const contactId = chatItem.chatDir.contact?.contactId;
+      const chatInfo = (chatItem as unknown as { chatInfo: { contact?: { contactId: number } } }).chatInfo;
+      const contactId = chatInfo?.contact?.contactId;
       if (!contactId) continue;
 
-      const text = chatItem.chatItem.content.msgContent?.text;
+      const content = chatItem.chatItem.content;
+      const text = (content as { msgContent?: { text?: string } }).msgContent?.text;
       if (!text) continue;
 
       logger.info('loop', 'Incoming message', {
@@ -190,41 +193,25 @@ export class MessageLoop {
 
     const history = this.memory.getHistory(contactId, MAX_HISTORY_MESSAGES).reverse();
 
-    let sessionId = this.memory.getKiloSession(contactId);
-    if (!sessionId) {
-      sessionId = await this.sessions.getOrCreateSession(String(simplexContactId));
-      this.memory.setKiloSession(contactId, sessionId);
-    }
-
     const systemContext = loadSystemContext();
-    const parts: KiloChatPart[] = [];
+    const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];
 
     if (systemContext) {
-      parts.push({
-        type: 'text',
-        text: systemContext,
-        metadata: { role: 'system' },
-      });
+      messages.push({ role: 'system', content: systemContext });
     }
 
     for (const msg of history.slice(0, -1)) {
-      parts.push({
-        type: 'text',
-        text: msg.content,
-        metadata: { role: msg.role === 'user' ? 'user' : 'assistant' },
+      messages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content,
       });
     }
 
-    parts.push({
-      type: 'text',
-      text,
-      metadata: { role: 'user' },
-    });
+    messages.push({ role: 'user', content: text });
 
-    logger.debug('loop', 'Sending to Kilo', { sessionId, contactId, parts: parts.length });
+    logger.debug('loop', 'Sending to Kilo', { contactId, messages: messages.length });
 
-    await this.kilo.chat(sessionId, parts);
-    const response = await this.kilo.waitForResponse(sessionId);
+    const response = await this.kilo.chatWithMessages(messages);
 
     if (!response.trim()) {
       throw new Error('Kilo returned empty response');
@@ -236,15 +223,25 @@ export class MessageLoop {
 
     logger.info('loop', 'Response sent', {
       contactId: simplexContactId,
-      sessionId,
       responseLength: truncatedResponse.length,
     });
   }
 
   async sendToContact(contactId: number, text: string): Promise<void> {
     const corrId = generateCorrId();
-    const message = encodeSendMessage(corrId, contactId, text);
-    const parsed = JSON.parse(message) as { corrId: string; cmd: string };
-    await this.simplex.sendCommand(parsed.cmd);
+    const displayName = this.getContactDisplayName(contactId);
+    const cmd = `@'${displayName}' ${text}`;
+    logger.debug('loop', 'Sending message', { contactId, displayName, cmd });
+    try {
+      const response = await this.simplex.sendCommand(cmd);
+      logger.debug('loop', 'Send response', { contactId, response: JSON.stringify(response).slice(0, 200) });
+    } catch (err) {
+      logger.error('loop', 'Send error', { contactId, error: String(err) });
+    }
+  }
+
+  private getContactDisplayName(contactId: number): string {
+    const contact = this.memory.getOrCreateContact(contactId);
+    return contact.display_name || String(contactId);
   }
 }

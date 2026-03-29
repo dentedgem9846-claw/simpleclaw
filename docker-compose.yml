@@ -6,13 +6,15 @@ services:
       context: ./containers/simplex-chat
       dockerfile: Dockerfile
     container_name: simpleclaw-simplex-1
+    environment:
+      - SIMPLEX_USER=${SIMPLEX_USER:-SimpleClaw}
     volumes:
-      - simplex-data-1:/data
+      - simplex-data-1:/home/simplex/.simplex
     ports:
       - "127.0.0.1:5225:5225"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "sh", "-c", "nc -z localhost 5225 || exit 1"]
+      test: ["CMD", "bash", "-c", "echo >/dev/tcp/127.0.0.1/5225"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,6 +30,7 @@ services:
     volumes:
       - ./core:/workspace/core:ro
       - ./.kilo:/workspace/.kilo:ro
+      - ./kilo.json:/workspace/kilo.json:ro
       - kilo-data-1:/root/.local/share/kilo/sessions
     ports:
       - "127.0.0.1:4096:4096"
@@ -44,8 +47,8 @@ services:
       dockerfile: Dockerfile
     container_name: simpleclaw-bot-1
     environment:
-      - SIMPLEX_WS_URL=ws://simplex-chat-1:5225
-      - KILO_API_URL=http://kilo-1:4096
+      - SIMPLEX_WS_URL=ws://simpleclaw-simplex-1:5225
+      - KILO_API_URL=http://simpleclaw-kilo-1:4096
       - KILO_PASSWORD=${KILO_PASSWORD:-}
       - BOT_DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-info}

@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set username [lindex $argv 0]
+
+spawn simplex-chat
+
+expect {
+    "display name:" {
+        send "$username\r"
+    }
+    "No user profiles found" {
+        expect "display name:"
+        send "$username\r"
+    }
+    timeout {
+        puts "Timeout waiting for prompt"
+        exit 1
+    }
+}
+
+expect {
+    -re "Welcome.*$username" {
+        puts "User created successfully"
+    }
+    -re ">" {
+        puts "User created"
+    }
+    timeout {
+        puts "Timeout after username entry"
+    }
+}
+
+send "/quit\r"
+expect eof
