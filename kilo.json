@@ -1,6 +1,6 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
-  "model": "kilo/minimax/minimax-m2.7",
+  "model": "kilo/kilo-auto/frontier",
   "small_model": "kilo/kilo-auto/free",
   "default_agent": "code",
   "instructions": [

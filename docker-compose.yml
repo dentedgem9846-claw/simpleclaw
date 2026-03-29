@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  simplex-chat-1:
+    build:
+      context: ./containers/simplex-chat
+      dockerfile: Dockerfile
+    container_name: simpleclaw-simplex-1
+    volumes:
+      - simplex-data-1:/data
+    ports:
+      - "127.0.0.1:5225:5225"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 5225 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kilo-1:
+    build:
+      context: ./containers/kilo
+      dockerfile: Dockerfile
+    container_name: simpleclaw-kilo-1
+    environment:
+      - KILO_API_KEY=${KILO_API_KEY}
+      - KILO_SERVER_PASSWORD=${KILO_PASSWORD:-}
+    volumes:
+      - ./core:/workspace/core:ro
+      - ./.kilo:/workspace/.kilo:ro
+      - kilo-data-1:/root/.local/share/kilo/sessions
+    ports:
+      - "127.0.0.1:4096:4096"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4096/global/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  simpleclaw-bot-1:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: simpleclaw-bot-1
+    environment:
+      - SIMPLEX_WS_URL=ws://simplex-chat-1:5225
+      - KILO_API_URL=http://kilo-1:4096
+      - KILO_PASSWORD=${KILO_PASSWORD:-}
+      - BOT_DATA_DIR=/app/data
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./data:/workspace/data:ro
+      - ./core:/workspace/core:ro
+      - ./.kilo/agents:/workspace/.kilo/agents:ro
+      - bot-data-1:/app/data
+    depends_on:
+      simplex-chat-1:
+        condition: service_healthy
+      kilo-1:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  simplex-data-1:
+  kilo-data-1:
+  bot-data-1:

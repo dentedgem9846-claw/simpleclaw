@@ -1,21 +1,48 @@
 # Setup SimpleClaw
 
-SimpleClaw is now a pure Kilo-based system. No database, no guardian, no build step.
+SimpleClaw is a personal memory system with a SimpleX Chat bot interface.
+
+## Prerequisites
+
+- Docker and Docker Compose
+- A Kilo API key from https://app.kilo.ai/
 
 ## Quick Start
 
-### 1. Install Kilo
+### 1. Copy Environment File
 
 ```bash
-npm install -g @kilocode/cli
+cp .env.example .env
 ```
 
-### 2. Start SimpleClaw
+### 2. Configure Kilo API
+
+Edit `.env`:
+```
+KILO_API_KEY=klo_...
+# Optional - only if your Kilo server requires authentication
+# KILO_PASSWORD=your-secure-password
+```
+
+### 3. Build and Start
 
 ```bash
-cd /path/to/simpleclaw
-kilo --agent simpleclaw
+docker-compose up -d --build
 ```
+
+Docker Compose automatically reads `.env` in the same directory.
+
+### 4. Get the Bot Address
+
+```bash
+docker-compose logs simpleclaw-bot-1 | grep -i "connLink\|address"
+```
+
+### 5. Connect via SimpleX Chat
+
+1. Install [SimpleX Chat](https://simplex.chat/)
+2. Add contact → Paste the `simplex:/...` address from step 4
+3. Send a message to the bot
 
 ## Optional: Configure Your Profile
 
@@ -25,12 +52,16 @@ Edit `core/USER.md` with your preferences:
 - Communication preferences
 - Morning/evening routine times
 
-## That's It
+## Troubleshooting
 
-SimpleClaw will:
-- Read existing zettels from `data/zettels/`
-- Capture new notes in `data/inbox/`
-- Invoke workers for background tasks
-- Track state in `core/NOW.md`
+```bash
+# Check logs
+docker-compose logs -f
 
-No database. No cron jobs. Just markdown files and Kilo agents.
+# Rebuild from scratch
+docker-compose down -v
+docker-compose up -d --build
+
+# Access bot database
+docker-compose exec simpleclaw-bot-1 sqlite3 /app/data/bot.db
+```

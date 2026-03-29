@@ -1,0 +1,41 @@
+{
+  "name": "simpleclaw-bot",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "precommit": "biome check --write src && tsc --noEmit && vitest run"
+  },
+  "vitest": {
+    "include": ["src/**/*.test.ts"],
+    "coverage": {
+      "provider": "v8",
+      "reporter": ["text", "lcov"],
+      "include": ["src/**/*.ts"],
+      "exclude": ["src/index.ts", "src/**/*.test.ts"]
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^16.4.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.10",
+    "@vitest/coverage-v8": "^4.1.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.2"
+  }
+}

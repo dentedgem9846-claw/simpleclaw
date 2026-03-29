@@ -46,18 +46,60 @@ simpleclaw/
 
 ## Quick Start
 
-### 1. Install Kilo
+### Prerequisites
+
+- Docker and Docker Compose
+- An AI API key (see [AI Providers](#ai-providers) below)
+
+### 1. Clone and Setup
 
 ```bash
-npm install -g @kilocode/cli
+git clone <your-repo-url>
+cd simpleclaw
+cp .env.example .env
 ```
 
-### 2. Start SimpleClaw
+### 2. Configure Kilo Gateway
+
+1. Get your Kilo API key from https://app.kilo.ai/
+2. Edit `.env`:
+   ```
+   KILO_API_KEY=klo_...
+   # Optional - only if your Kilo server requires authentication
+   # KILO_PASSWORD=your-secure-password
+   ```
+
+### 3. Start the Bot
 
 ```bash
-cd /path/to/simpleclaw
-kilo --agent simpleclaw
+# Build and start all containers (uses .env file automatically)
+docker-compose up -d --build
+
+# Watch logs
+docker-compose logs -f
 ```
+
+**Note:** `docker-compose` automatically reads variables from `.env` in the same directory.
+
+### 4. Get the Bot Address
+
+```bash
+# Find the connection address in logs
+docker-compose logs simpleclaw-bot-1 | grep -i "connLink\|address"
+```
+
+Example output:
+```
+Bot address created {"link": "simplex:/alice123...xyz#false"}
+```
+
+### 5. Connect via SimpleX Chat
+
+1. Install [SimpleX Chat](https://simplex.chat/) on your phone or desktop
+2. Add contact → Enter connection address → Paste the `simplex:/...` address
+3. Send a message to the bot
+
+The bot will respond using Kilo AI with access to your memory system.
 
 ## How It Works
 
@@ -88,9 +130,50 @@ SimpleClaw will:
 2. Link to related notes
 3. Surface it when relevant
 
-## Configuration
+## Troubleshooting
 
-### Adding Workers
+### Container won't start
+
+```bash
+# Check logs for errors
+docker-compose logs
+
+# Rebuild from scratch
+docker-compose down -v
+docker-compose up -d --build
+```
+
+### Bot not responding
+
+1. Check health endpoint:
+   ```bash
+   curl http://localhost:8080/health
+   ```
+2. Verify Kilo is healthy:
+   ```bash
+   docker-compose logs kilo-1
+   ```
+3. Check SimpleX connection:
+   ```bash
+   docker-compose logs simplex-chat-1
+   ```
+
+### View/Edit Data
+
+```bash
+# Access bot database
+docker-compose exec simpleclaw-bot-1 sqlite3 /app/data/bot.db
+
+# List zettels
+ls -la data/zettels/
+
+# View inbox
+ls -la data/inbox/
+```
+
+---
+
+## Configuration
 
 Create `.kilo/agents/my-worker.md` following the existing patterns.
 
