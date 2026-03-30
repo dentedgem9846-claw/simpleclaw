@@ -1,67 +1,166 @@
-# Setup SimpleClaw
+---
+description: Set up SimpleClaw from scratch or troubleshoot existing installation
+agent: simpleclaw
+---
 
-SimpleClaw is a personal memory system with a SimpleX Chat bot interface.
+You are setting up SimpleClaw, a personal memory system with SimpleX Chat bot interface.
 
-## Prerequisites
+## Prerequisites Check
 
-- Docker and Docker Compose
+Verify the user has:
+- Docker and Docker Compose installed
 - A Kilo API key from https://app.kilo.ai/
 
-## Quick Start
+If missing, tell them how to install:
+- Docker: https://docs.docker.com/get-docker/
+- Kilo API key: https://app.kilo.ai/
 
-### 1. Copy Environment File
+## Step 1: Clone and Configure
 
 ```bash
+git clone https://github.com/dentedgem9846-claw/simpleclaw.git
+cd simpleclaw
 cp .env.example .env
 ```
 
-### 2. Configure Kilo API
+Tell the user to edit `.env` and add their `KILO_API_KEY`.
 
-Edit `.env`:
-```
-KILO_API_KEY=klo_...
-# Optional - only if your Kilo server requires authentication
-# KILO_PASSWORD=your-secure-password
-```
-
-### 3. Build and Start
+## Step 2: Build and Start
 
 ```bash
 docker-compose up -d --build
 ```
 
-Docker Compose automatically reads `.env` in the same directory.
-
-### 4. Get the Bot Address
-
+Check status:
 ```bash
-docker-compose logs simpleclaw-bot-1 | grep -i "connLink\|address"
+docker-compose ps
 ```
 
-### 5. Connect via SimpleX Chat
+Expected: All containers running.
 
-1. Install [SimpleX Chat](https://simplex.chat/)
-2. Add contact → Paste the `simplex:/...` address from step 4
-3. Send a message to the bot
-
-## Optional: Configure Your Profile
-
-Edit `core/USER.md` with your preferences:
-- Name and timezone
-- Current projects
-- Communication preferences
-- Morning/evening routine times
-
-## Troubleshooting
+## Step 3: Verify Services
 
 ```bash
-# Check logs
-docker-compose logs -f
+# Check bot health
+curl http://localhost:8080/health
 
-# Rebuild from scratch
+# Check containers
+docker-compose ps
+```
+
+## Step 4: Get Bot Address
+
+```bash
+docker-compose logs simpleclaw-bot-1 | grep -i "address"
+```
+
+Tell the user this address to connect via SimpleX Chat.
+
+## Troubleshooting Workflow
+
+**If something fails, systematically work through these:**
+
+### Problem: Container won't start
+
+```bash
+# 1. Check for port conflicts
+netstat -tlnp | grep -E "8080|4096|5225"
+
+# 2. Rebuild from scratch
 docker-compose down -v
 docker-compose up -d --build
 
-# Access bot database
-docker-compose exec simpleclaw-bot-1 sqlite3 /app/data/bot.db
+# 3. Check logs for specific errors
+docker-compose logs --tail=50
 ```
+
+### Problem: Bot not responding to messages
+
+```bash
+# 1. Check if messages are being received
+docker-compose logs bot-1 | grep "Incoming message"
+
+# 2. Check if responses are being sent
+docker-compose logs bot-1 | grep "Response sent"
+
+# 3. Test WebSocket connection
+docker exec simpleclaw-bot-1 node -e "
+const WebSocket = require('ws');
+const ws = new WebSocket('ws://simpleclaw-simplex-1:5225');
+ws.on('open', () => console.log('Connected'));
+ws.on('message', (d) => console.log('Received:', d.toString().substring(0, 200)));
+"
+```
+
+### Problem: SimpleX "Failed reading: empty" error
+
+This means SimpleX CLI doesn't recognize the command.
+
+```bash
+# 1. Test basic commands
+docker exec simpleclaw-bot-1 node -e "
+const WebSocket = require('ws');
+const ws = new WebSocket('ws://simpleclaw-simplex-1:5225');
+ws.on('open', () => ws.send(JSON.stringify({corrId: '1', cmd: '/users'})));
+ws.on('message', (d) => {
+  const r = JSON.parse(d);
+  console.log('Type:', r.resp?.type);
+  if (r.resp?.type === 'chatCmdError') console.log('Error:', JSON.stringify(r.resp.chatError));
+  ws.close();
+});
+"
+
+# 2. Working command format for sending messages:
+#    @'contactDisplayName' Your message here
+
+# 3. NOT working formats:
+#    /_send @contactId json [...]
+#    apiSendMessage @contactId text:message
+```
+
+### Problem: Kilo API errors
+
+```bash
+# 1. Test Kilo Cloud API directly
+curl -X POST https://api.kilo.ai/api/gateway/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $KILO_API_KEY" \
+  -d '{"model":"kilo-auto/free","messages":[{"role":"user","content":"test"}]}'
+
+# 2. Check container logs
+docker-compose logs kilo-1
+
+# 3. Verify API key is set
+docker-compose exec kilo-1 env | grep KILO
+```
+
+## Common Fixes
+
+| Problem | Solution |
+|---------|----------|
+| Container won't start | `docker-compose down -v && docker-compose up -d --build` |
+| Bot not responding | `docker-compose restart bot-1` |
+| SimpleX errors | Check command format is `@'name' message` not JSON |
+| Kilo errors | Verify API key in `.env` and test with curl |
+
+## Quick Reference
+
+| Action | Command |
+|--------|---------|
+| Start all | `docker-compose up -d --build` |
+| Stop all | `docker-compose down` |
+| View logs | `docker-compose logs -f` |
+| Check health | `curl http://localhost:8080/health` |
+| Restart bot | `docker-compose restart bot-1` |
+
+## After Successful Setup
+
+Tell the user to:
+1. Connect via SimpleX Chat using the bot address
+2. Edit `core/USER.md` with their profile
+3. Edit `core/CLAW.md` to customize principles
+4. Start chatting with their memory bot!
+
+---
+
+*Last updated: 2026-03-29*
