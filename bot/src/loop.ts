@@ -141,7 +141,8 @@ export class MessageLoop {
 
   private async handleNewChatItems(event: NewChatItemsEvent): Promise<void> {
     for (const chatItem of event.chatItems) {
-      const chatInfo = (chatItem as unknown as { chatInfo: { contact?: { contactId: number } } }).chatInfo;
+      const chatInfo = (chatItem as unknown as { chatInfo: { contact?: { contactId: number } } })
+        .chatInfo;
       const contactId = chatInfo?.contact?.contactId;
       if (!contactId) continue;
 
@@ -234,7 +235,10 @@ export class MessageLoop {
     logger.debug('loop', 'Sending message', { contactId, displayName, cmd });
     try {
       const response = await this.simplex.sendCommand(cmd);
-      logger.debug('loop', 'Send response', { contactId, response: JSON.stringify(response).slice(0, 200) });
+      logger.debug('loop', 'Send response', {
+        contactId,
+        response: JSON.stringify(response).slice(0, 200),
+      });
     } catch (err) {
       logger.error('loop', 'Send error', { contactId, error: String(err) });
     }

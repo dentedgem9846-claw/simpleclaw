@@ -4,22 +4,22 @@
 
 ## What is SimpleClaw?
 
-SimpleClaw is a personal knowledge management system built on Kilo AI. It follows Zettelkasten principles to create an atomic note system that:
-- Remembers everything you share
+SimpleClaw is a personal knowledge management system that combines:
+- **SimpleX Chat** - Encrypted, serverless messaging bot interface
+- **Kilo AI** - Local AI agent with skills to read/write files, search, browse
+
+It follows Zettelkasten principles to create an atomic note system that:
+- Remembers everything you share via SimpleX Chat
 - Surfaces relevant context automatically
 - Creates blog posts while you sleep
 - Discovers connections across your notes
 
-## Core Philosophy
+## Features
 
-SimpleClaw follows 32 principles from PKM, Second Brain, and AI Memory research:
-- **Conversation is the interface** - No commands, just talk
-- **Memory is contextual** - Surfaces what you need before you ask
-- **Atomicity** - One idea per note, linked to others
-- **Frictionless capture** - Propose, don't demand
-- **Human sovereignty** - You own your data
-
-See [core/CLAW.md](core/CLAW.md) for full principles.
+- **Private & Encrypted** - Messages go directly between your app and the bot
+- **Local AI** - Runs locally via Docker (no cloud AI calls)
+- **Zettelkasten Memory** - Atomic notes with wikilinks
+- **Background Workers** - Memory Keeper, Idea Generator, Blog Writer
 
 ## Architecture
 
@@ -31,6 +31,14 @@ simpleclaw/
 │       ├── memory-keeper.md  # Organizes inbox
 │       ├── idea-generator.md # Discovers connections
 │       └── blog-writer.md    # Creates blog posts
+│
+├── bot/                      # SimpleX Chat bot
+│   ├── src/
+│   │   ├── index.ts          # Main entry
+│   │   ├── loop.ts           # Message processing
+│   │   ├── kilo/             # Kilo API client
+│   │   └── simplex/          # SimpleX WebSocket client
+│   └── Dockerfile
 │
 ├── core/                     # System files
 │   ├── CLAW.md              # Philosophy & constraints
@@ -48,26 +56,52 @@ simpleclaw/
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- A Kilo API key from https://app.kilo.ai/
+- Docker and Docker Compose v2+
+- SimpleX Chat app (mobile or desktop)
+- Optional: Kilo API key for enhanced AI (can run free tier)
 
 ### Setup
 
-Follow the detailed [Setup Guide](docs/SETUP.md) for step-by-step instructions.
-
-**TL;DR:**
 ```bash
 git clone https://github.com/dentedgem9846-claw/simpleclaw.git
 cd simpleclaw
 cp .env.example .env
-# Edit .env with your KILO_API_KEY
-docker-compose up -d --build
-docker-compose logs simpleclaw-bot-1 | grep -i "address"
 ```
 
-Then connect via SimpleX Chat using the address from the logs.
+Edit `.env` with your configuration (see `.env.example` for options).
+
+### Run
+
+```bash
+docker compose up -d --build
+docker compose logs simpleclaw-bot-1 | grep -i "address"
+```
+
+The bot will print a connection address (e.g., `sm://...@smp.simplex.im`). 
+Open SimpleX Chat, add a contact using that address, and start chatting!
+
+### Default Greeting
+
+When you first connect, the bot sends:
+```
+Hello! I'm SimpleClaw, your personal knowledge assistant. Send /help for available commands.
+```
 
 ## How It Works
+
+### SimpleX Chat Integration
+
+The bot connects to SimpleX servers and waits for contact requests. Once connected:
+- Messages are encrypted end-to-end
+- No server-side storage of messages
+- Bot responds in real-time via Kilo AI
+
+### Kilo AI Agent
+
+The bot forwards messages to a local Kilo AI agent which:
+- Has tools: read/write files, search, web fetch, browser automation
+- Follows CLAW.md principles (see `core/CLAW.md`)
+- Manages your Zettelkasten memory system
 
 ### Zettelkasten System
 
@@ -84,43 +118,63 @@ Invoke workers for background tasks:
 - **Idea Generator** - Discovers connections across notes
 - **Blog Writer** - Creates blog posts from your ideas
 
-### Daily Usage
+## Configuration
 
-Just speak naturally:
-```
-"Jane's birthday is August 15, she's a senior engineer on the platform team"
-```
+### Environment Variables
 
-SimpleClaw will:
-1. Create a zettel in `data/zettels/`
-2. Link to related notes
-3. Surface it when relevant
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SIMPLEX_WS_URL` | SimpleX WebSocket URL | `ws://simpleclaw-simplex-1:5225` |
+| `KILO_API_URL` | Local Kilo API URL | `http://simpleclaw-kilo-1:4096` |
+| `KILO_API_KEY` | Kilo cloud API key (optional) | - |
+| `KILO_PASSWORD` | Local Kilo password | - |
+| `BOT_DATA_DIR` | Bot data directory | `/app/data` |
+
+### Agent Permissions
+
+Edit `.kilo/agents/simpleclaw.md` to configure:
+- `read`/`write` - File access permissions
+- `bash` - Shell command access
+- `webfetch` - Web fetch capability
+- `browser` - Browser automation capability
+- `task` - Worker invocation permissions
 
 ## Troubleshooting
 
-**See [docs/SETUP.md](docs/SETUP.md#troubleshooting-workflow) for detailed troubleshooting.**
-
-Quick checks:
 ```bash
-# Is bot running?
-docker-compose ps
+# Check all containers
+docker compose ps
 
-# Is bot healthy?
+# Check bot health
 curl http://localhost:8080/health
 
-# Check logs
-docker-compose logs --tail=50
+# View bot logs
+docker compose logs simpleclaw-bot-1 --tail=100
+
+# View Kilo logs
+docker compose logs simpleclaw-kilo-1 --tail=50
+
+# Restart everything
+docker compose restart
 ```
 
----
+**See [.kilocode/workflows/setup.md](.kilocode/workflows/setup.md) for detailed troubleshooting.**
 
-## Configuration
+## Development
 
-Create `.kilo/agents/my-worker.md` following the existing patterns.
+### Bot Development
 
-### Customizing Personalities
+```bash
+cd bot
+npm install
+npm run dev      # Watch mode with ts-node
+npm run build    # Production build
+npm run precommit # Lint, typecheck, test
+```
 
-Edit agent files in `.kilo/agents/`. Each worker has a distinct voice while following CLAW principles.
+### Agent Development
+
+Edit files in `.kilo/agents/`. The bot automatically loads agent configurations.
 
 ## License
 

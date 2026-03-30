@@ -50,6 +50,7 @@ services:
       - SIMPLEX_WS_URL=ws://simpleclaw-simplex-1:5225
       - KILO_API_URL=http://simpleclaw-kilo-1:4096
       - KILO_PASSWORD=${KILO_PASSWORD:-}
+      - KILO_API_KEY=${KILO_API_KEY:-}
       - BOT_DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
