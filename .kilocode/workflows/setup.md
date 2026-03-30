@@ -3,17 +3,26 @@ description: Set up SimpleClaw from scratch or troubleshoot existing installatio
 agent: simpleclaw
 ---
 
-You are setting up SimpleClaw, a personal memory system with SimpleX Chat bot interface.
+You are setting up SimpleClaw, a personal memory system with SimpleX Chat bot interface powered by local Kilo AI.
 
 ## Prerequisites Check
 
 Verify the user has:
-- Docker and Docker Compose installed
-- A Kilo API key from https://app.kilo.ai/
+- Docker and Docker Compose v2+
+- SimpleX Chat app (mobile or desktop)
+- Optional: Kilo API key from https://app.kilo.ai/
 
 If missing, tell them how to install:
 - Docker: https://docs.docker.com/get-docker/
-- Kilo API key: https://app.kilo.ai/
+- SimpleX Chat: https://simplex.chat/
+- Kilo API key: https://app.kilo.ai/ (optional for local mode)
+
+## Architecture
+
+SimpleClaw runs 3 Docker containers:
+1. **simpleclaw-simplex-1** - SimpleX Chat server for WebSocket connection
+2. **simpleclaw-kilo-1** - Local Kilo AI agent (no cloud required)
+3. **simpleclaw-bot-1** - Bot bridging SimpleX and Kilo
 
 ## Step 1: Clone and Configure
 
@@ -23,20 +32,28 @@ cd simpleclaw
 cp .env.example .env
 ```
 
-Tell the user to edit `.env` and add their `KILO_API_KEY`.
+Edit `.env`:
+- `KILO_API_KEY` - Optional, for enhanced AI (can run free tier)
+- `KILO_PASSWORD` - Password for local Kilo (optional)
 
 ## Step 2: Build and Start
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 Check status:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
-Expected: All containers running.
+Expected:
+```
+NAME                   STATUS
+simpleclaw-bot-1      healthy
+simpleclaw-kilo-1      healthy
+simpleclaw-simplex-1   healthy
+```
 
 ## Step 3: Verify Services
 
@@ -44,17 +61,32 @@ Expected: All containers running.
 # Check bot health
 curl http://localhost:8080/health
 
+# Check Kilo health
+curl http://localhost:4096/global/health
+
 # Check containers
-docker-compose ps
+docker compose ps
 ```
 
 ## Step 4: Get Bot Address
 
 ```bash
-docker-compose logs simpleclaw-bot-1 | grep -i "address"
+docker compose logs simpleclaw-bot-1 | grep -i "address"
 ```
 
-Tell the user this address to connect via SimpleX Chat.
+The output contains a SimpleX address like:
+```
+sm://abcdef...@smp.simplex.im,smp5.simplex.im
+```
+
+Tell the user to copy this address and add as contact in SimpleX Chat.
+
+## Step 5: First Connection
+
+When a user connects via SimpleX Chat:
+1. Bot auto-accepts the contact request
+2. Bot sends greeting: "Hello! I'm SimpleClaw..."
+3. Bot creates a new Kilo session for that user
 
 ## Troubleshooting Workflow
 
@@ -64,94 +96,106 @@ Tell the user this address to connect via SimpleX Chat.
 
 ```bash
 # 1. Check for port conflicts
-netstat -tlnp | grep -E "8080|4096|5225"
+ss -tlnp | grep -E "8080|4096|5225"
 
 # 2. Rebuild from scratch
-docker-compose down -v
-docker-compose up -d --build
+docker compose down -v
+docker compose up -d --build
 
 # 3. Check logs for specific errors
-docker-compose logs --tail=50
+docker compose logs --tail=100
 ```
 
 ### Problem: Bot not responding to messages
 
 ```bash
 # 1. Check if messages are being received
-docker-compose logs bot-1 | grep "Incoming message"
+docker compose logs simpleclaw-bot-1 | grep "Incoming message"
 
-# 2. Check if responses are being sent
-docker-compose logs bot-1 | grep "Response sent"
+# 2. Check if Kilo is responding
+docker compose logs simpleclaw-bot-1 | grep "Session created"
 
-# 3. Test WebSocket connection
-docker exec simpleclaw-bot-1 node -e "
-const WebSocket = require('ws');
-const ws = new WebSocket('ws://simpleclaw-simplex-1:5225');
-ws.on('open', () => console.log('Connected'));
-ws.on('message', (d) => console.log('Received:', d.toString().substring(0, 200)));
-"
-```
+# 3. Check Kilo health
+curl http://localhost:4096/global/health
 
-### Problem: SimpleX "Failed reading: empty" error
-
-This means SimpleX CLI doesn't recognize the command.
-
-```bash
-# 1. Test basic commands
-docker exec simpleclaw-bot-1 node -e "
-const WebSocket = require('ws');
-const ws = new WebSocket('ws://simpleclaw-simplex-1:5225');
-ws.on('open', () => ws.send(JSON.stringify({corrId: '1', cmd: '/users'})));
-ws.on('message', (d) => {
-  const r = JSON.parse(d);
-  console.log('Type:', r.resp?.type);
-  if (r.resp?.type === 'chatCmdError') console.log('Error:', JSON.stringify(r.resp.chatError));
-  ws.close();
-});
-"
-
-# 2. Working command format for sending messages:
-#    @'contactDisplayName' Your message here
-
-# 3. NOT working formats:
-#    /_send @contactId json [...]
-#    apiSendMessage @contactId text:message
-```
-
-### Problem: Kilo API errors
-
-```bash
-# 1. Test Kilo Cloud API directly
-curl -X POST https://api.kilo.ai/api/gateway/v1/chat/completions \
+# 4. Test Kilo API directly
+SESSION=$(curl -s -X POST http://localhost:4096/session \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $KILO_API_KEY" \
-  -d '{"model":"kilo-auto/free","messages":[{"role":"user","content":"test"}]}'
+  -d '{"directory":"/workspace"}')
+echo $SESSION
+```
 
-# 2. Check container logs
-docker-compose logs kilo-1
+### Problem: SimpleX connection issues
 
-# 3. Verify API key is set
-docker-compose exec kilo-1 env | grep KILO
+```bash
+# 1. Check SimpleX logs
+docker compose logs simpleclaw-simplex-1 --tail=50
+
+# 2. Verify WebSocket is accessible from bot
+docker compose exec simpleclaw-bot-1 wget -q -O - http://simpleclaw-simplex-1:5225 || echo "WS not reachable"
+
+# 3. Restart SimpleX
+docker compose restart simpleclaw-simplex-1
+```
+
+### Problem: Kilo API errors (404 or empty responses)
+
+The local Kilo API uses these endpoints:
+- `POST /session` - Create session (returns JSON with `id`)
+- `POST /session/{id}/prompt_async` - Send prompt (returns 204 empty)
+- `GET /session/{id}/message` - Get messages (returns JSON array)
+
+```bash
+# 1. Test session creation
+curl -s -X POST http://localhost:4096/session \
+  -H "Content-Type: application/json" \
+  -d '{"directory":"/workspace"}'
+
+# 2. Test prompt (replace SESSION_ID)
+curl -s -X POST "http://localhost:4096/session/SESSION_ID/prompt_async" \
+  -H "Content-Type: application/json" \
+  -d '{"parts":[{"type":"text","text":"test","metadata":{"role":"user"}}]}'
+
+# 3. Check messages
+curl -s "http://localhost:4096/session/SESSION_ID/message"
+```
+
+### Problem: Contact request not accepted
+
+Bot should auto-accept contact requests. Check logs:
+```bash
+docker compose logs simpleclaw-bot-1 | grep -E "Contact request|accepting"
 ```
 
 ## Common Fixes
 
 | Problem | Solution |
 |---------|----------|
-| Container won't start | `docker-compose down -v && docker-compose up -d --build` |
-| Bot not responding | `docker-compose restart bot-1` |
-| SimpleX errors | Check command format is `@'name' message` not JSON |
-| Kilo errors | Verify API key in `.env` and test with curl |
+| Container won't start | `docker compose down -v && docker compose up -d --build` |
+| Bot not responding | `docker compose restart simpleclaw-bot-1` |
+| Kilo 404 errors | Bot uses wrong API path - rebuild or check endpoint |
+| SimpleX errors | `docker compose restart simpleclaw-simplex-1` |
 
 ## Quick Reference
 
 | Action | Command |
 |--------|---------|
-| Start all | `docker-compose up -d --build` |
-| Stop all | `docker-compose down` |
-| View logs | `docker-compose logs -f` |
+| Start all | `docker compose up -d --build` |
+| Stop all | `docker compose down` |
+| View all logs | `docker compose logs -f` |
+| View bot logs | `docker compose logs -f simpleclaw-bot-1` |
 | Check health | `curl http://localhost:8080/health` |
-| Restart bot | `docker-compose restart bot-1` |
+| Restart bot | `docker compose restart simpleclaw-bot-1` |
+| Rebuild all | `docker compose down && docker compose up -d --build` |
+
+## Port Reference
+
+| Port | Service | Description |
+|------|---------|-------------|
+| 8080 | Bot | Health check endpoint |
+| 4096 | Kilo | Local Kilo API |
+| 5225 | SimpleX | SimpleX WebSocket |
+| 5224 | SimpleX | SimpleX messaging |
 
 ## After Successful Setup
 
@@ -163,4 +207,4 @@ Tell the user to:
 
 ---
 
-*Last updated: 2026-03-29*
+*Last updated: 2026-03-30*
